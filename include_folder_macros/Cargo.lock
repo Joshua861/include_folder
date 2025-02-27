@@ -20,9 +20,17 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "heck",
+ "include_folder_shared",
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "include_folder_shared"
+version = "0.1.0"
+dependencies = [
+ "quote",
 ]
 
 [[package]]

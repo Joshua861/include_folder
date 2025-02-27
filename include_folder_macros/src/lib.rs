@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::Result;
 use heck::{ToPascalCase, ToSnekCase};
+use include_folder_shared::{File, FileData};
 // use image::DynamicImage;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -12,25 +13,8 @@ use syn::{
 };
 
 #[derive(Debug, Clone)]
-enum File {
-    Blob(Vec<u8>),
-    // Image(DynamicImage),
-    Text(String),
-}
-
-impl File {
-    fn _type(&self) -> String {
-        match self {
-            Self::Blob(_) => "Vec<u8>",
-            Self::Text(_) => "String",
-        }
-        .to_string()
-    }
-}
-
-#[derive(Debug, Clone)]
 enum Tree {
-    Leaf(File),
+    Leaf(FileData),
     Branch(HashMap<String, Tree>),
 }
 
@@ -81,8 +65,6 @@ pub fn include_folder(tokens: TokenStream) -> TokenStream {
             #inner
         }
     };
-
-    dbg!(&output.to_string());
 
     output.into()
 }
@@ -138,19 +120,19 @@ fn build_tree(dir_path: &str) -> Result<Tree> {
     Ok(Tree::Branch(dir_map))
 }
 
-fn read_file(path: &Path) -> Result<File> {
+fn read_file(path: &Path) -> Result<FileData> {
     /*let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     if extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "gif" {
         let img = image::open(path)?;
-        Ok(File::Image(img))
+        Ok(FileData::Image(img))
     } else*/
     {
         let content = fs::read(path)?;
 
         match String::from_utf8(content.clone()) {
-            Ok(text) => Ok(File::Text(text)),
-            Err(_) => Ok(File::Blob(content)),
+            Ok(text) => Ok(FileData::Text(text)),
+            Err(_) => Ok(FileData::Blob(content)),
         }
     }
 }
@@ -187,7 +169,7 @@ fn process_tree(tree: Tree) -> Tree {
     }
 }
 
-fn merge_into_map(map: &mut HashMap<String, Tree>, parts: &[String], file: File) {
+fn merge_into_map(map: &mut HashMap<String, Tree>, parts: &[String], file: FileData) {
     if parts.is_empty() {
         return;
     }
@@ -217,15 +199,44 @@ fn gen_code(tree: Tree, top: &mut TokenStream2, path: String) -> TokenStream2 {
 
     match tree {
         Tree::Leaf(file) => match file {
-            File::Blob(data) => {
+            FileData::Blob(data) => {
                 let iter = data.into_iter();
                 quote! { vec![ #(#iter),* ] }
             }
-            File::Text(text) => {
+            FileData::Text(text) => {
                 quote! { #text.to_string() }
             }
         },
         Tree::Branch(map) => {
+            let dir_impl = {
+                let files = get_files(Tree::Branch(map.clone()), "".to_string());
+                let files = files.into_iter().map(|f| {
+                    let path = &f.path;
+                    let parts = f.path.split('.');
+                    let mut tokens = quote! { self };
+
+                    for part in parts {
+                        let ident = syn::Ident::new(part, proc_macro2::Span::call_site());
+                        tokens = quote! { #tokens.#ident };
+                    }
+
+                    quote! { ::include_folder::File {path: #path.to_string(), data: #tokens.clone().to_file_data() } }
+                });
+                let files = quote! { vec![ #(#files),* ] };
+
+                let tokens = quote! {
+                    impl ::include_folder::Directory for #path_ident {
+                        fn files(&self) -> Vec<::include_folder::File> {
+                            use ::include_folder::Data;
+
+                            #files
+                        }
+                    }
+                };
+
+                tokens
+            };
+
             let types = map.iter().map(|(key, value)| {
                 let key_ident = syn::Ident::new(key, proc_macro2::Span::call_site());
 
@@ -242,6 +253,7 @@ fn gen_code(tree: Tree, top: &mut TokenStream2, path: String) -> TokenStream2 {
             });
 
             let struct_declaration = quote! {
+                #[derive(Clone, Debug)]
                 struct #path_ident {
                     #(#types),*
                 }
@@ -250,6 +262,7 @@ fn gen_code(tree: Tree, top: &mut TokenStream2, path: String) -> TokenStream2 {
             *top = quote! {
                 #top
                 #struct_declaration
+                #dir_impl
             };
 
             let fields = map.into_iter().map(|(key, value)| {
@@ -271,70 +284,23 @@ fn gen_code(tree: Tree, top: &mut TokenStream2, path: String) -> TokenStream2 {
     }
 }
 
-// fn not_hidden(entry: &DirEntry) -> bool {
-//     !entry
-//         .file_name()
-//         .to_str()
-//         .map(|s| s.starts_with("."))
-//         .unwrap_or(false)
-// }
+fn get_files(tree: Tree, path: String) -> Vec<File> {
+    match tree {
+        Tree::Leaf(data) => vec![File { path, data }],
+        Tree::Branch(map) => {
+            let mut files = vec![];
+            for (key, value) in map {
+                let path = if path.is_empty() {
+                    key
+                } else {
+                    format!("{}.{}", path, key)
+                };
+                for file in get_files(value, path) {
+                    files.push(file);
+                }
+            }
 
-// fn process_tree(tree: Tree) -> Tree {
-//     match tree {
-//         Tree::Branch(map) => {
-//             let mut new_branch = Tree::Branch(HashMap::new());
-//
-//             for (k, v) in map {
-//                 let tree = match v {
-//                     Tree::Leaf(file) => {
-//                         let parts: Vec<_> = k
-//                             .split('.')
-//                             .filter(|s| !s.is_empty())
-//                             .map(|e| e.to_string())
-//                             .collect();
-//
-//                         parts_to_map(parts, file)
-//                     }
-//                     Tree::Branch(_) => process_tree(v),
-//                 };
-//                 dbg!(&tree);
-//                 add_branch(&mut new_branch, &tree, &k);
-//             }
-//
-//             new_branch
-//         }
-//         Tree::Leaf(file) => Tree::Leaf(file),
-//     }
-// }
-//
-// fn parts_to_map(mut parts: Vec<String>, end_file: File) -> Tree {
-//     if parts.is_empty() {
-//         return Tree::Leaf(end_file);
-//     }
-//
-//     let part = parts.remove(0);
-//
-//     Tree::Branch(HashMap::from([(part, parts_to_map(parts, end_file))]))
-// }
-//
-// fn add_branch(mother: &mut Tree, daughter: &Tree, branch_name: &str) {
-//     match mother {
-//         Tree::Branch(map) => {
-//             if map.contains_key(branch_name) {
-//                 match map.get_mut(branch_name).unwrap() {
-//                     Tree::Leaf(_) => panic!("Folder and file with same name."),
-//                     inner_branch @ Tree::Branch(_) => match daughter {
-//                         Tree::Leaf(_) => panic!("Folder and file with same name."),
-//                         Tree::Branch(other_map) => {
-//                             for key in other_map.keys() {
-//                                 let value = other_map.get(key).unwrap();
-//                                 add_branch(inner_branch, value, key)
-//                             }
-//                         }
-//                     },
-//                 }
-//             }
-//         }
-//         _ => unreachable!(),
-//     }
-// }
+            files
+        }
+    }
+}

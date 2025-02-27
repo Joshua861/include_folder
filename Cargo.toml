@@ -9,4 +9,5 @@ repository = "https://github.com/Joshua861/include_folder"
 homepage = "https://github.com/Joshua861/include_folder"
 
 [dependencies]
-include_folder_macros = "0.1.0"
+include_folder_macros = { path = "./include_folder_macros/" }
+include_folder_shared = { path = "./include_folder_shared/" }

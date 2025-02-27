@@ -19,19 +19,26 @@ name = "include_folder"
 version = "0.1.0"
 dependencies = [
  "include_folder_macros",
+ "include_folder_shared",
 ]
 
 [[package]]
 name = "include_folder_macros"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc225eadda929742d1573974beeee03b11d8bc6d7048f40433cf050e6a04058f"
 dependencies = [
  "anyhow",
  "heck",
+ "include_folder_shared",
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "include_folder_shared"
+version = "0.1.0"
+dependencies = [
+ "quote",
 ]
 
 [[package]]
