@@ -1,6 +1,6 @@
 [package]
 name = "include_folder"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 description = "Proc macro for recrsively including all files in a folder as fields on a struct."
@@ -9,5 +9,5 @@ repository = "https://github.com/Joshua861/include_folder"
 homepage = "https://github.com/Joshua861/include_folder"
 
 [dependencies]
-include_folder_macros = { path = "./include_folder_macros/" }
-include_folder_shared = { path = "./include_folder_shared/" }
+include_folder_macros = "0.2.0"
+include_folder_shared = "0.2.0"

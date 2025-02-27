@@ -1,6 +1,6 @@
 [package]
 name = "include_folder_macros"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "proc macro for include_folder"
@@ -16,4 +16,4 @@ heck = "0.5.0"
 proc-macro2 = "1.0.93"
 quote = "1.0.38"
 syn = "2.0.98"
-include_folder_shared = { path = "../include_folder_shared/" }
+include_folder_shared = "0.2.0"
