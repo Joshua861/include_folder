@@ -1,5 +1,3 @@
-use quote::ToTokens;
-
 #[derive(Debug, Clone)]
 pub struct File {
     pub path: String,

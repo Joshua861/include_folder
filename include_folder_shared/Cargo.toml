@@ -1,7 +1,8 @@
 [package]
 name = "include_folder_shared"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-
-[dependencies]
-quote = "1.0.38"
+description = "Shared code for include_folder and include_folder_macros."
+readme = "../README.md"
+license = "MIT"
+repository = "https://github.com/Joshua861/include_folder"
