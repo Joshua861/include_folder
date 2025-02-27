@@ -42,6 +42,25 @@ fn main() {
     let contents: String = dir.nested.folders.test.txt;
 
     dbg!(contents); // "Hello World!\n"
+
+    // we can also get all the files in a folder
+    dbg!(dir.files());
+
+    // [src/main.rs:8:5] dir.files() = [
+    //     File {
+    //         path: "src.main.rs",
+    //         data: Text(
+    //             "",
+    //         ),
+    //     },
+    //     File {
+    //         path: "src.nested.folders.test.txt",
+    //         data: Text(
+    //             "Hello World!\n",
+    //         ),
+    //     },
+    //      ...
+    // ]
 }
 ```
 
